@@ -140,8 +140,6 @@ private:
 
 	hrt_abstime _last_run{0};
 
-	float _flaps_applied{0.0f};
-
 	float _airspeed_scaling{1.0f};
 
 	bool _landed{true};

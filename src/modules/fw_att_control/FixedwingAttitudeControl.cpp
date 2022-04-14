@@ -711,12 +711,10 @@ void FixedwingAttitudeControl::controlFlaps(const float dt)
 	float flap_control = 0.0f;
 
 	/* map flaps by default to manual if valid */
-	if (PX4_ISFINITE(_manual_control_setpoint.flaps) && _vcontrol_mode.flag_control_manual_enabled
-	    && fabsf(_param_fw_flaps_scl.get()) > 0.01f) {
-		flap_control = _manual_control_setpoint.flaps * _param_fw_flaps_scl.get();
+	if (PX4_ISFINITE(_manual_control_setpoint.flaps) && _vcontrol_mode.flag_control_manual_enabled) {
+		flap_control = _manual_control_setpoint.flaps;
 
-	} else if (_vcontrol_mode.flag_control_auto_enabled
-		   && fabsf(_param_fw_flaps_scl.get()) > 0.01f) {
+	} else if (_vcontrol_mode.flag_control_auto_enabled) {
 
 		switch (_att_sp.apply_flaps) {
 		case vehicle_attitude_setpoint_s::FLAPS_OFF:
@@ -724,11 +722,11 @@ void FixedwingAttitudeControl::controlFlaps(const float dt)
 			break;
 
 		case vehicle_attitude_setpoint_s::FLAPS_LAND:
-			flap_control = 1.0f * _param_fw_flaps_scl.get() * _param_fw_flaps_lnd_scl.get();
+			flap_control = _param_fw_flaps_lnd_scl.get();
 			break;
 
 		case vehicle_attitude_setpoint_s::FLAPS_TAKEOFF:
-			flap_control = 1.0f * _param_fw_flaps_scl.get() * _param_fw_flaps_to_scl.get();
+			flap_control = _param_fw_flaps_to_scl.get();
 			break;
 		}
 	}

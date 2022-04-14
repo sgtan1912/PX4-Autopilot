@@ -185,7 +185,6 @@ private:
 		(ParamFloat<px4::params::FW_DTRIM_Y_VMIN>) _param_fw_dtrim_y_vmin,
 
 		(ParamFloat<px4::params::FW_FLAPS_LND_SCL>) _param_fw_flaps_lnd_scl,
-		(ParamFloat<px4::params::FW_FLAPS_SCL>) _param_fw_flaps_scl,
 		(ParamFloat<px4::params::FW_FLAPS_TO_SCL>) _param_fw_flaps_to_scl,
 		(ParamFloat<px4::params::FW_SPOILERS_LND>) _param_fw_spoilers_lnd,
 		(ParamFloat<px4::params::FW_SPOILERS_DESC>) _param_fw_spoilers_desc,

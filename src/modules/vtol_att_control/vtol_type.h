@@ -48,6 +48,9 @@
 #include <drivers/drv_pwm_output.h>
 #include <lib/slew_rate/SlewRate.hpp>
 
+static constexpr float kFlapSlewRateVtol = 1.f; //minimum 1 second from none to full flap deflection
+static constexpr float kSpoilerSlewRateVtol = 1.f; //minimum 1 second from none to full spoiler deflection
+
 struct Params {
 	int32_t ctrl_alloc;
 	int32_t idle_pwm_mc;			// pwm value for idle in mc mode
@@ -211,6 +214,11 @@ public:
 
 	virtual void parameters_update() = 0;
 
+	/**
+	 * @brief Set current time delta
+	 *
+	 * @param dt Current time delta [s]
+	 */
 	void setDt(float dt) {_dt = dt; }
 
 protected:

@@ -67,8 +67,8 @@ FixedwingAttitudeControl::FixedwingAttitudeControl(bool vtol) :
 	_yaw_ctrl.set_max_rate(radians(_param_fw_acro_z_max.get()));
 
 	_rate_ctrl_status_pub.advertise();
-	_spoiler_setpoint_with_slewrate.setSlewRate(1.f); //min 1s from no spoiler deflection to full deflection
-	_flaps_setpoint_with_slewrate.setSlewRate(1.f);
+	_spoiler_setpoint_with_slewrate.setSlewRate(kSpoilerSlewRate);
+	_flaps_setpoint_with_slewrate.setSlewRate(kFlapSlewRate);
 }
 
 FixedwingAttitudeControl::~FixedwingAttitudeControl()
@@ -390,8 +390,8 @@ void FixedwingAttitudeControl::Run()
 			return;
 		}
 
-		control_flaps(dt);
-		control_spoilers(dt);
+		controlFlaps(dt);
+		controlSpoilers(dt);
 
 		/* decide if in stabilized or full manual control */
 		if (_vcontrol_mode.flag_control_rates_enabled) {
@@ -705,7 +705,7 @@ void FixedwingAttitudeControl::publishThrustSetpoint(const hrt_abstime &timestam
 	_vehicle_thrust_setpoint_pub.publish(v_thrust_sp);
 }
 
-void FixedwingAttitudeControl::control_flaps(const float dt)
+void FixedwingAttitudeControl::controlFlaps(const float dt)
 {
 	/* default flaps to center */
 	float flap_control = 0.0f;
@@ -737,7 +737,7 @@ void FixedwingAttitudeControl::control_flaps(const float dt)
 	_flaps_setpoint_with_slewrate.update(flap_control, dt);
 }
 
-void FixedwingAttitudeControl::control_spoilers(const float dt)
+void FixedwingAttitudeControl::controlSpoilers(const float dt)
 {
 	float spoiler_control = 0.f;
 

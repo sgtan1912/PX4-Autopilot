@@ -79,6 +79,9 @@ using uORB::SubscriptionData;
 
 using namespace time_literals;
 
+static constexpr float kFlapSlewRate = 1.f; //minimum 1 second from nono to full flap deflection
+static constexpr float kSpoilerSlewRate = 1.f; //minimum 1 second from nono to full spoiler deflection
+
 class FixedwingAttitudeControl final : public ModuleBase<FixedwingAttitudeControl>, public ModuleParams,
 	public px4::WorkItem
 {
@@ -234,8 +237,19 @@ private:
 	ECL_YawController		_yaw_ctrl;
 	ECL_WheelController		_wheel_ctrl;
 
-	void control_flaps(const float dt);
-	void control_spoilers(const float dt);
+	/**
+	 * @brief Set current time delta for flap control (used in slew rate limiter)
+	 *
+	 * @param dt Current time delta [s]
+	 */
+	void controlFlaps(const float dt);
+
+	/**
+	 * @brief Set current time delta for spoiler control (used in slew rate limiter)
+	 *
+	 * @param dt Current time delta [s]
+	 */
+	void controlSpoilers(const float dt);
 
 	void updateActuatorControlsStatus(float dt);
 

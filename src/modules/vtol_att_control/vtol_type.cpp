@@ -136,8 +136,8 @@ bool VtolType::init()
 		}
 	}
 
-	_spoiler_setpoint_with_slewrate.setSlewRate(1.f); //at least 1s from no spoiler deflection to full deflection
-	_flaps_setpoint_with_slewrate.setSlewRate(1.f); //at least 1s from no flaps deflection to full deflection
+	_flaps_setpoint_with_slewrate.setSlewRate(kFlapSlewRateVtol);
+	_spoiler_setpoint_with_slewrate.setSlewRate(kSpoilerSlewRateVtol);
 
 	return true;
 

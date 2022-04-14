@@ -776,8 +776,8 @@ PARAM_DEFINE_FLOAT(FW_SPOILERS_DESC, 0.f);
  * Also applies to spoilerons (ailerons deflected down) if enabled in the mixer/allocation.
  *
  * @value 0 Disabled
- * @value 0 Flaps channel
- * @value 0 Aux1
+ * @value 1 Flaps channel
+ * @value 2 Aux1
  * @group FW Attitude Control
  */
 PARAM_DEFINE_INT32(FW_SPOILERS_MAN, 0);

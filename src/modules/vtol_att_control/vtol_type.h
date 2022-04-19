@@ -48,8 +48,8 @@
 #include <drivers/drv_pwm_output.h>
 #include <lib/slew_rate/SlewRate.hpp>
 
-static constexpr float kFlapSlewRateVtol = 1.f; //minimum 1 second from none to full flap deflection
-static constexpr float kSpoilerSlewRateVtol = 1.f; //minimum 1 second from none to full spoiler deflection
+static constexpr float kFlapSlewRateVtol = 1.f; // minimum time from none to full flap deflection [s]
+static constexpr float kSpoilerSlewRateVtol = 1.f; // minimum time from none to full spoiler deflection [s]
 
 struct Params {
 	int32_t ctrl_alloc;
@@ -307,17 +307,10 @@ protected:
 
 	float update_and_get_backtransition_pitch_sp();
 
-	/**
-	 * @brief      Overrides controls for control surface or tilt mechanism in the context of preflight tests.
-	 *
-	 * @return     true while executing the test, false once done
-	 */
-	bool override_controls_for_test_mode();
-
 	SlewRate<float> _spoiler_setpoint_with_slewrate;
 	SlewRate<float> _flaps_setpoint_with_slewrate;
 
-	float _dt{0.0025f};
+	float _dt{0.0025f}; // time step [s]
 
 private:
 

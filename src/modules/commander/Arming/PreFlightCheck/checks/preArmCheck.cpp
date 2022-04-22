@@ -40,7 +40,7 @@
 
 bool PreFlightCheck::preArmCheck(orb_advert_t *mavlink_log_pub, const vehicle_status_flags_s &status_flags,
 				 const vehicle_control_mode_s &control_mode,
-				 const safety_s &safety, const arm_requirements_t &arm_requirements, vehicle_status_s &status, bool report_fail)
+				 Safety &safety, const arm_requirements_t &arm_requirements, vehicle_status_s &status, bool report_fail)
 {
 	bool prearm_ok = true;
 
@@ -150,7 +150,7 @@ bool PreFlightCheck::preArmCheck(orb_advert_t *mavlink_log_pub, const vehicle_st
 	}
 
 	// safety button
-	if (safety.safety_switch_available && !safety.safety_off) {
+	if (safety.isSwitchAvailable() && !safety.isSafetyOff()) {
 		// Fail transition if we need safety switch press
 		if (prearm_ok) {
 			if (report_fail) { mavlink_log_critical(mavlink_log_pub, "Arming denied! Press safety switch first"); }

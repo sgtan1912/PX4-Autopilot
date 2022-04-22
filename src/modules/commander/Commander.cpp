@@ -287,7 +287,8 @@ int Commander::custom_command(int argc, char *argv[])
 					   true, true, 30_s);
 		PX4_INFO("Preflight check: %s", preflight_check_res ? "OK" : "FAILED");
 
-		bool prearm_check_res = PreFlightCheck::preArmCheck(nullptr, vehicle_status_flags, vehicle_control_mode, safety_s{},
+		Safety dummy_safety;
+		bool prearm_check_res = PreFlightCheck::preArmCheck(nullptr, vehicle_status_flags, vehicle_control_mode, dummy_safety,
 					PreFlightCheck::arm_requirements_t{}, vehicle_status);
 		PX4_INFO("Prearm check: %s", prearm_check_res ? "OK" : "FAILED");
 
@@ -499,8 +500,6 @@ static constexpr const char *arm_disarm_reason_str(arm_disarm_reason_t calling_r
 	case arm_disarm_reason_t::command_external: return "external command";
 
 	case arm_disarm_reason_t::mission_start: return "mission start";
-
-	case arm_disarm_reason_t::safety_button: return "safety button";
 
 	case arm_disarm_reason_t::auto_disarm_land: return "landing";
 
@@ -785,7 +784,7 @@ transition_result_t Commander::disarm(arm_disarm_reason_t calling_reason, bool f
 				"Disarmed by {1}", calling_reason);
 
 		if (_param_com_force_safety.get()) {
-			_safety_handler.enableSafety();
+			_safety.activateSafety();
 		}
 
 		_status_changed = true;
@@ -825,6 +824,8 @@ Commander::Commander() :
 
 	_vehicle_gps_position_valid.set_hysteresis_time_from(false, GPS_VALID_TIME);
 	_vehicle_gps_position_valid.set_hysteresis_time_from(true, GPS_VALID_TIME);
+
+	_worker_thread.setSafety(&_safety);
 }
 
 Commander::~Commander()
@@ -1368,7 +1369,7 @@ Commander::handle_command(const vehicle_command_s &cmd)
 			} else {
 
 				/* try to go to INIT/PREFLIGHT arming state */
-				if (TRANSITION_DENIED == _arm_state_machine.arming_state_transition(_status, _vehicle_control_mode, safety_s{},
+				if (TRANSITION_DENIED == _arm_state_machine.arming_state_transition(_status, _vehicle_control_mode, _safety,
 						vehicle_status_s::ARMING_STATE_INIT, _armed,
 						false /* fRunPreArmChecks */, &_mavlink_log_pub, _status_flags,
 						PreFlightCheck::arm_requirements_t{}, // arming requirements not relevant for switching to ARMING_STATE_INIT
@@ -1608,7 +1609,7 @@ Commander::handle_command(const vehicle_command_s &cmd)
 unsigned
 Commander::handle_command_motor_test(const vehicle_command_s &cmd)
 {
-	if (_armed.armed || (_safety.safety_switch_available && !_safety.safety_off)) {
+	if (_armed.armed || (_safety.isSwitchAvailable() && !_safety.isSafetyOff())) {
 		return vehicle_command_s::VEHICLE_CMD_RESULT_DENIED;
 	}
 
@@ -1656,7 +1657,7 @@ Commander::handle_command_motor_test(const vehicle_command_s &cmd)
 unsigned
 Commander::handle_command_actuator_test(const vehicle_command_s &cmd)
 {
-	if (_armed.armed || (_safety.safety_switch_available && !_safety.safety_off)) {
+	if (_armed.armed || (_safety.isSwitchAvailable() && !_safety.isSafetyOff())) {
 		return vehicle_command_s::VEHICLE_CMD_RESULT_DENIED;
 	}
 
@@ -2281,37 +2282,20 @@ Commander::run()
 			}
 		}
 
-		_safety_handler.safetyButtonHandler();
+		/* safety button */
+		_status_changed = _safety.safetyButtonHandler();
 
-		/* update safety topic */
-		const bool safety_updated = _safety_sub.updated();
+		if (_status_changed) {
 
-		if (safety_updated) {
-			const bool previous_safety_valid = (_safety.timestamp != 0);
-			const bool previous_safety_off = _safety.safety_off;
+			set_health_flags(subsystem_info_s::SUBSYSTEM_TYPE_MOTORCONTROL, _safety.isSwitchAvailable(), _safety.isSafetyOff(),
+					 _safety.isSwitchAvailable(), _status);
 
-			if (_safety_sub.copy(&_safety)) {
-				set_health_flags(subsystem_info_s::SUBSYSTEM_TYPE_MOTORCONTROL, _safety.safety_switch_available, _safety.safety_off,
-						 _safety.safety_switch_available, _status);
+			// Notify the user if the status of the safety switch changes
+			if (_safety.isSafetyOff()) {
+				set_tune(tune_control_s::TUNE_ID_NOTIFY_POSITIVE);
 
-				// disarm if safety is now on and still armed
-				if (_armed.armed && _safety.safety_switch_available && !_safety.safety_off
-				    && (_status.hil_state == vehicle_status_s::HIL_STATE_OFF)) {
-					disarm(arm_disarm_reason_t::safety_button);
-				}
-
-				// Notify the user if the status of the safety switch changes
-				if (previous_safety_valid && _safety.safety_switch_available && previous_safety_off != _safety.safety_off) {
-
-					if (_safety.safety_off) {
-						set_tune(tune_control_s::TUNE_ID_NOTIFY_POSITIVE);
-
-					} else {
-						tune_neutral(true);
-					}
-
-					_status_changed = true;
-				}
+			} else {
+				tune_neutral(true);
 			}
 		}
 
@@ -3015,9 +2999,9 @@ Commander::run()
 				break;
 
 			case PrearmedMode::SAFETY_BUTTON:
-				if (_safety.safety_switch_available) {
+				if (_safety.isSwitchAvailable()) {
 					/* safety switch is present, go into prearmed if safety is off */
-					_armed.prearmed = _safety.safety_off;
+					_armed.prearmed = _safety.isSafetyOff();
 
 				} else {
 					/* safety switch is not present, do not go into prearmed */
@@ -3076,7 +3060,7 @@ Commander::run()
 
 		/* play arming and battery warning tunes */
 		if (!_arm_tune_played && _armed.armed &&
-		    (_safety.safety_switch_available || (_safety.safety_switch_available && _safety.safety_off))) {
+		    (_safety.isSwitchAvailable() || (_safety.isSwitchAvailable() && _safety.isSafetyOff()))) {
 
 			/* play tune when armed */
 			set_tune(tune_control_s::TUNE_ID_ARMING_WARNING);
@@ -3101,7 +3085,7 @@ Commander::run()
 		}
 
 		/* reset arm_tune_played when disarmed */
-		if (!_armed.armed || (_safety.safety_switch_available && !_safety.safety_off)) {
+		if (!_armed.armed || (_safety.isSwitchAvailable() && !_safety.isSafetyOff())) {
 
 			// Notify the user that it is safe to approach the vehicle
 			if (_arm_tune_played) {
